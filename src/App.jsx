@@ -6,6 +6,7 @@ import Login from "./views/Login.jsx";
 import Inicio from "./views/Inicio";
 import Productos from "./views/Productos";
 import Catalogo from "./views/Catalogo";
+
 //Importar archivo de estilos.
 import "./App.css";
 import Estadisticas from "./views/Estadisticas.jsx";
