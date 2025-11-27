@@ -1,25 +1,29 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Header from './components/Header';
-import Inicio from './views/Inicio';
-import Mascotas from './views/Mascotas';
-import AgregarMascota from './views/AgregarMascota';
-import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min';
-import './styles/App.css';
-
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+//Importar componente Encabezado.
+import Encabezado from "./components/Encabezado";
+//Importar las vistas.
+import Login from "./views/Login.jsx";
+import Inicio from "./views/Inicio";
+import Productos from "./views/Productos";
+import Catalogo from "./views/Catalogo";
+//Importar archivo de estilos.
+import "./App.css";
+import Estadisticas from "./views/Estadisticas.jsx";
 const App = () => {
   return (
     <Router>
-      <Header />
-      <main>
+      <Encabezado />
+      <main className="margen-superior-main">
         <Routes>
-          <Route path="/" element={<Inicio />} />
-          <Route path="/mascotas" element={<Mascotas />} />
-          <Route path="/agregar" element={<AgregarMascota />} />
+          <Route path="/" element={<Login />} />
+          <Route path="/inicio" element={<Inicio />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/catalogo" element={<Catalogo />} />
+          <Route path="/estadisticas" element={<Estadisticas />} />
+          <Route path="*" element={<h2>404 - Página no encontrada</h2>} />
         </Routes>
       </main>
     </Router>
   );
 };
-
 export default App;
