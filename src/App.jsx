@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 //Importar componente encabezado.
-import Encabezado from "./components/Encabezado.jsx";
+import Encabezado from "./components/encabezado.jsx";
 //Importar las vistas.
 import Login from "./views/Login.jsx";
 import Inicio from "./views/Inicio";
