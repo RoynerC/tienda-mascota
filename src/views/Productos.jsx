@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
+import { Container, Row, Col, Button, Modal, Form, Alert } from "react-bootstrap";
 import { db } from "../database/firebaseconfig";
 import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc } from "firebase/firestore";
 import TablaProductos from "../components/productos/TablaProductos";
@@ -9,6 +9,16 @@ import ModalEdicionProducto from "../components/productos/ModalEdicionProducto";
 import CuadroBusquedas from "../components/busqueda/CuadroBusquedas";
 
 const Productos = () => {
+  // ESTADOS DE AUTENTICACIÓN
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  // CONTRASEÑA DE ADMINISTRADOR - ¡CÁMBIALA POR UNA SEGURA!
+  const ADMIN_PASSWORD = "marlene18";
+
+  // Estados existentes de tu componente
   const [productos, setProductos] = useState([]);
   const [categorias, setCategorias] = useState([]);
   const productosCollection = collection(db, "productos");
@@ -24,7 +34,7 @@ const Productos = () => {
     precio: null,
     Raza: null,
     categoria: "",
-    imagen: ""
+    imagen: "",
   });
 
   const [mostrarModalEliminar, setMostrarModalEliminar] = useState(false);
@@ -34,23 +44,73 @@ const Productos = () => {
   const [mostrarModalEditar, setMostrarModalEditar] = useState(false);
   const [productoEditado, setProductoEditado] = useState(null);
 
-  // Manejador de cambios en inputs del formulario de edición
-  // Manejador de cambios en inputs del formulario de edición
-const manejoCambioInputEditar = (e) => {
-    const { name, value } = e.target;
-    setProductoEditado((prev) => ({
-        ...prev,
-        [name]: name === "precio" ? Number(value) || 0 : value,
-    }));
-};
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const savedAuth = sessionStorage.getItem("adminAuth");
+    if (savedAuth === "true") {
+      setIsAuthenticated(true);
+    }
+    cargarProductos();
+    cargarCategorias();
+  }, []);
 
-  // Función para abrir el modal de edición con datos prellenados
-  const manejarEditar = (producto) => {
-    setProductoEditado({ ...producto });
-    setMostrarModalEditar(true);
+  // FUNCIONES DE AUTENTICACIÓN
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (password === ADMIN_PASSWORD) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem("adminAuth", "true");
+      setShowLoginModal(false);
+      setPassword("");
+    } else {
+      setError("❌ Contraseña incorrecta");
+      setPassword("");
+    }
   };
 
-  // Función para actualizar un producto existente
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem("adminAuth");
+  };
+
+  // FUNCIONES PROTEGIDAS
+  const abrirModalAgregarProtegido = () => {
+    if (isAuthenticated) {
+      setMostrarModal(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const manejarEditarProtegido = (producto) => {
+    if (isAuthenticated) {
+      setProductoEditado({ ...producto });
+      setMostrarModalEditar(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const manejarEliminarProtegido = (producto) => {
+    if (isAuthenticated) {
+      setProductoAEliminar(producto);
+      setMostrarModalEliminar(true);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  // FUNCIONES EXISTENTES (sin cambios)
+  const manejoCambioInputEditar = (e) => {
+    const { name, value } = e.target;
+    setProductoEditado((prev) => ({
+      ...prev,
+      [name]: name === "precio" ? Number(value) || 0 : value,
+    }));
+  };
+
   const editarProducto = async () => {
     if (
       !productoEditado?.nombre ||
@@ -71,7 +131,7 @@ const manejoCambioInputEditar = (e) => {
         precio: productoEditado.precio,
         Raza: productoEditado.Raza,
         categoria: productoEditado.categoria,
-        imagen: productoEditado.imagen
+        imagen: productoEditado.imagen,
       });
       cargarProductos();
       console.log("Producto actualizado exitosamente.");
@@ -80,20 +140,17 @@ const manejoCambioInputEditar = (e) => {
       console.error("Error al actualizar el producto:", error);
       alert("Error al actualizar el producto: " + error.message);
     }
-  }
+  };
 
-  // Manejador de cambios en inputs del formulario de nuevo producto
   const manejoCambioInput = (e) => {
     const { name, value } = e.target;
     setNuevoProducto((prev) => ({
-        ...prev,
-        [name]: name === "precio" ? Number(value) || 0 : value, // Solo precio es numérico
+      ...prev,
+      [name]: name === "precio" ? Number(value) || 0 : value,
     }));
-};
+  };
 
-  // Función para agregar un nuevo producto
   const agregarProducto = async () => {
-    // Validar campos requeridos
     if (
       !nuevoProducto.nombre ||
       !nuevoProducto.descripcion ||
@@ -104,19 +161,16 @@ const manejoCambioInputEditar = (e) => {
       alert("Por favor, completa todos los campos antes de guardar.");
       return;
     }
-    // Cerrar modal
     setMostrarModal(false);
     try {
-      // Referencia a la colección de productos en Firestore
       await addDoc(productosCollection, nuevoProducto);
-      // Limpiar campos del formulario
       setNuevoProducto({
         nombre: "",
         descripcion: "",
         precio: null,
         Raza: null,
         categoria: "",
-        imagen: ""
+        imagen: "",
       });
       cargarProductos();
       console.log("Producto agregado exitosamente.");
@@ -124,7 +178,7 @@ const manejoCambioInputEditar = (e) => {
       console.error("Error al agregar el producto:", error);
       alert("Error al agregar el producto: " + error.message);
     }
-  }
+  };
 
   const cargarProductos = async () => {
     try {
@@ -155,13 +209,6 @@ const manejoCambioInputEditar = (e) => {
     }
   };
 
-  // Función para manejar el clic en el botón "Eliminar"
-  const manejarEliminar = (producto) => {
-    setProductoAEliminar(producto);
-    setMostrarModalEliminar(true);
-  };
-
-  // Función para eliminar un producto
   const eliminarProducto = async () => {
     if (!productoAEliminar) return;
     try {
@@ -176,11 +223,6 @@ const manejoCambioInputEditar = (e) => {
       alert("Error al eliminar el producto: " + error.message);
     }
   };
-
-  useEffect(() => {
-    cargarProductos();
-    cargarCategorias();
-  }, []);
 
   const manejarCambioBusqueda = (e) => {
     const texto = e.target.value.toLowerCase();
@@ -201,16 +243,42 @@ const manejoCambioInputEditar = (e) => {
 
   return (
     <Container className="mt-4">
-      <h4>Gestión de Productos</h4>
+      {/* HEADER CON ESTADO DE AUTENTICACIÓN */}
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h4>Gestión de Productos</h4>
+        {isAuthenticated ? (
+          <div className="d-flex align-items-center gap-3">
+            <span className="text-success fw-bold">✅ Modo Administrador</span>
+            <Button variant="outline-danger" size="sm" onClick={handleLogout}>
+              Cerrar Sesión
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="outline-warning"
+            onClick={() => setShowLoginModal(true)}
+          >
+            🔒 Acceso Administrador
+          </Button>
+        )}
+      </div>
+
       <Row>
         <Col lg={3} md={4} sm={4} xs={5}>
-          <Button
-            className="mb-3"
-            onClick={() => setMostrarModal(true)}
-            style={{ width: "100%" }}
-          >
-            Agregar producto
-          </Button>
+          {/* BOTÓN PROTEGIDO - SOLO VISIBLE PARA AUTENTICADOS */}
+          {isAuthenticated ? (
+            <Button
+              className="mb-3"
+              onClick={abrirModalAgregarProtegido}
+              style={{ width: "100%" }}
+            >
+              Agregar producto
+            </Button>
+          ) : (
+            <Alert variant="info" className="mb-3 p-2 text-center">
+              <small>Inicia sesión para agregar productos</small>
+            </Alert>
+          )}
         </Col>
         <Col lg={5} md={8} sm={8} xs={7}>
           <CuadroBusquedas
@@ -220,37 +288,84 @@ const manejoCambioInputEditar = (e) => {
         </Col>
       </Row>
 
+      {/* TABLA CON FUNCIONES PROTEGIDAS */}
       <TablaProductos
         productos={productosFiltrados}
         categorias={categorias}
-        manejarEliminar={manejarEliminar}
-        manejarEditar={manejarEditar}
+        manejarEliminar={manejarEliminarProtegido}
+        manejarEditar={manejarEditarProtegido}
       />
 
-      <ModalRegistroProducto
-        mostrarModal={mostrarModal}
-        setMostrarModal={setMostrarModal}
-        nuevoProducto={nuevoProducto}
-        manejoCambioInput={manejoCambioInput}
-        agregarProducto={agregarProducto}
-        categorias={categorias}
-      />
+      {/* MODALES - SOLO FUNCIONAN SI ESTÁ AUTENTICADO */}
+      {isAuthenticated && (
+        <>
+          <ModalRegistroProducto
+            mostrarModal={mostrarModal}
+            setMostrarModal={setMostrarModal}
+            nuevoProducto={nuevoProducto}
+            manejoCambioInput={manejoCambioInput}
+            agregarProducto={agregarProducto}
+            categorias={categorias}
+          />
 
-      <ModalEliminacionProducto
-        mostrarModalEliminar={mostrarModalEliminar}
-        setMostrarModalEliminar={setMostrarModalEliminar}
-        productoAEliminar={productoAEliminar}
-        eliminarProducto={eliminarProducto}
-      />
+          <ModalEliminacionProducto
+            mostrarModalEliminar={mostrarModalEliminar}
+            setMostrarModalEliminar={setMostrarModalEliminar}
+            productoAEliminar={productoAEliminar}
+            eliminarProducto={eliminarProducto}
+          />
 
-      <ModalEdicionProducto
-        mostrarModalEditar={mostrarModalEditar}
-        setMostrarModalEditar={setMostrarModalEditar}
-        productoEditado={productoEditado}
-        manejoCambioInputEditar={manejoCambioInputEditar}
-        editarProducto={editarProducto}
-        categorias={categorias}
-      />
+          <ModalEdicionProducto
+            mostrarModalEditar={mostrarModalEditar}
+            setMostrarModalEditar={setMostrarModalEditar}
+            productoEditado={productoEditado}
+            manejoCambioInputEditar={manejoCambioInputEditar}
+            editarProducto={editarProducto}
+            categorias={categorias}
+          />
+        </>
+      )}
+
+      {/* MODAL DE LOGIN */}
+      <Modal
+        show={showLoginModal}
+        onHide={() => setShowLoginModal(false)}
+        centered
+      >
+        <Modal.Header closeButton className="bg-warning">
+          <Modal.Title>🔐 Autenticación Requerida</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p className="text-muted mb-3">
+            Esta acción requiere permisos de administrador.
+          </p>
+          <Form onSubmit={handleLogin}>
+            <Form.Group className="mb-3">
+              <Form.Label>Contraseña de Administrador</Form.Label>
+              <Form.Control
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Ingresa la contraseña de administrador"
+                required
+                autoFocus
+              />
+              {error && <div className="text-danger mt-2">{error}</div>}
+            </Form.Group>
+            <div className="d-flex gap-2 justify-content-end">
+              <Button
+                variant="secondary"
+                onClick={() => setShowLoginModal(false)}
+              >
+                Cancelar
+              </Button>
+              <Button variant="success" type="submit">
+                Verificar y Acceder
+              </Button>
+            </div>
+          </Form>
+        </Modal.Body>
+      </Modal>
     </Container>
   );
 };
